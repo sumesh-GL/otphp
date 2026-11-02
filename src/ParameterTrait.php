@@ -96,7 +96,17 @@ trait ParameterTrait
 
     public function getDigits(): int
     {
-        return $this->getParameter('digits');
+        $value = $this->getParameter('digits');
+
+        Assertion::integer($value, 'Invalid "digits" parameter.');
+        Assertion::between(
+            $value,
+            1,
+            OTPInterface::MAX_DIGITS,
+            'Invalid "digits" parameter.'
+        );
+
+        return $value;
     }
 
     private function setDigits(int $digits): void
@@ -132,16 +142,24 @@ trait ParameterTrait
     {
         $map = $this->getParameterMap();
 
-        if (true === \array_key_exists($parameter, $map)) {
+        if (\array_key_exists($parameter, $map)) {
             $callback = $map[$parameter];
             $value = $callback($value);
         }
 
-        if (property_exists($this, $parameter)) {
-            $this->$parameter = $value;
-        } else {
-            $this->parameters[$parameter] = $value;
+        if ('label' === $parameter) {
+            $this->label = $value;
+
+            return;
         }
+
+        if ('issuer' === $parameter) {
+            $this->issuer = $value;
+
+            return;
+        }
+
+        $this->parameters[$parameter] = $value;
     }
 
     /**
@@ -170,9 +188,16 @@ trait ParameterTrait
                 return $value;
             },
             'digits' => function ($value): int {
-                Assertion::greaterThan($value, 0, 'Digits must be at least 1.');
+                $value = (int) $value;
 
-                return (int) $value;
+                Assertion::greaterThan($value, 0, 'Digits must be at least 1.');
+                Assertion::lessOrEqualThan(
+                    $value,
+                    OTPInterface::MAX_DIGITS,
+                    sprintf('Digits must not exceed %d.', OTPInterface::MAX_DIGITS)
+                );
+
+                return $value;
             },
             'issuer' => function ($value) {
                 Assertion::false($this->hasColon($value), 'Issuer must not contain a colon.');

@@ -172,4 +172,23 @@ final class FactoryTest extends TestCase
         static::assertEquals('JDDK4U6G3BJLEQ', $totp->getSecret());
         static::assertEquals('otpauth://totp/My%20Test%20-%20Auth?secret=JDDK4U6G3BJLEQ', $totp->getProvisioningUri());
     }
+
+    /**
+     * @test
+     */
+    public function provisioningUriCannotOverwriteInternalParameters(): void
+    {
+        $uri = 'otpauth://totp/Test?secret=JDDK4U6G3BJLEZ7Y&parameters=malicious';
+
+        $result = Factory::loadFromProvisioningUri($uri);
+
+        static::assertInstanceOf(TOTP::class, $result);
+        static::assertEquals('JDDK4U6G3BJLEZ7Y', $result->getSecret());
+        static::assertEquals('Test', $result->getLabel());
+        static::assertEquals('malicious', $result->getParameter('parameters'));
+        static::assertEquals(
+            'otpauth://totp/Test?parameters=malicious&secret=JDDK4U6G3BJLEZ7Y',
+            $result->getProvisioningUri()
+        );
+    }
 }
